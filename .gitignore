@@ -14,10 +14,28 @@ Thumbs.db
 !*.example
 !*.example.*
 
-# Node
+# Node & Next.js (Frontend)
 node_modules/
+.next/
 
-# Python
+# Python & FastAPI (Backend)
 __pycache__/
 venv/
 .venv/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Uploads & Database (Backend)
+uploads/
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# Alembic
+migrations/__pycache__/
