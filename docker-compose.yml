@@ -21,16 +21,16 @@ services:
 
   # ── Backend API ───────────────────────────────────────────────────────────
   backend:
-    build: .
+    build: ./backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/mindmap_db
     volumes:
-      - ./uploads:/app/uploads
+      - ./backend/uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
