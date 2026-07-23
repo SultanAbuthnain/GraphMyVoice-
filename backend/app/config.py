@@ -31,11 +31,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 10080  # 7 days
 
-    # ── AI Providers ─────────────────────────
-    gemini_api_key: str = ""
+    # ── AI Providers ─────────────────────────────
+    groq_api_key: str = ""
 
-    # ── LLM ──────────────────────────────────
-    llm_model: str = "gemini-1.5-pro"
+    # ── LLM / STT (Groq) ─────────────────────────
+    llm_model: str = "llama-3.3-70b-versatile"
     llm_max_retries: int = 3
     llm_temperature: float = 0.1
 

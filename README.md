@@ -1,124 +1,255 @@
-# Audio-to-Mindmap Learning Assistant
+# GraphMyVoice — Audio to Mind Map
 
-Audio-to-Mindmap Learning Assistant is a comprehensive system designed to automatically convert recorded audio lectures into interactive, structured mind maps and actionable tasks.
+Transform any audio lecture into a structured, interactive mind map — automatically.
 
-This application is a collaborative capstone project developed by two students:
-*   Frontend Developer: Responsible for the React/Next.js user interface and interactive mind map visualization.
-*   Backend Developer: Responsible for the FastAPI architecture, database design, and the AI agent pipeline using LangGraph and Google Gemini.
+GraphMyVoice is an AI-powered learning assistant that takes a recorded audio file (lecture, meeting, voice note) and converts it into a fully interactive mind map with extracted goals, plans, tasks, and notes.
+
+---
+
+## The Problem We Solved
+
+Students and professionals often sit through long lectures or meetings and struggle to organize the information afterward. Manual note-taking is slow and incomplete, and existing tools require you to type everything manually.
+
+Our solution: Just upload an audio file. GraphMyVoice handles the rest:
+
+1. Transcribes the audio using Groq Whisper (fast, free, accurate)
+2. Validates the transcript quality with pre/post guardrails
+3. Extracts goals, plans, and tasks using a Llama LLM
+4. Builds an interactive mind map you can explore, annotate, and act on
+
+---
+
+## How It Works
+
+```mermaid
+flowchart TD
+    A([User uploads audio file]) --> B[Ingestion Node\nValidate file type and size]
+    B --> C[Transcription Node\nGroq Whisper STT]
+    C --> D{Guardrail Pre\nQuality check}
+    D -->|Transcript too short / empty| E([Pipeline fails with error])
+    D -->|Transcript OK| F[Extraction Node\nGroq Llama 3.3-70b\nOutputs JSON: topic - goals - plans - tasks]
+    F --> G[Mindmap Builder Node\nConvert JSON to nodes and edges]
+    G --> H{Guardrail Post\nHallucination check}
+    H -->|Score below threshold| I[Retry Extraction\nmax 3 retries]
+    I --> F
+    H -->|Score OK| J[Persistence Node\nSave to PostgreSQL]
+    J --> K([Session status: completed])
+    K --> L[Frontend renders\ninteractive mind map]
+
+    style A fill:#1e293b,color:#f8fafc
+    style K fill:#166534,color:#f8fafc
+    style E fill:#991b1b,color:#f8fafc
+    style L fill:#1e40af,color:#f8fafc
+```
+
+---
 
 ## System Architecture
 
-The application is split into two primary components:
+```
+Browser (Next.js)
+       |
+       | HTTP / REST
+       v
+FastAPI Backend  <-->  PostgreSQL Database
+       |
+       | LangGraph Pipeline
+       v
+  Groq API (Whisper + Llama)
+```
 
-1.  **Backend (`/backend`)**: A robust API built with FastAPI, SQLAlchemy, and LangGraph. It handles audio ingestion, transcription, and mind map extraction using Google Gemini 1.5. Data is persisted in a PostgreSQL database.
-2.  **Frontend (`/frontend`)**: A modern web application built with Next.js and ReactFlow. It allows users to upload audio, view real-time processing status, interact with the generated mind map, and manage extracted tasks and notes.
+---
 
-## Technologies Used
+## Tech Stack
 
-### Backend Stack
-*   **FastAPI**: A modern, high-performance web framework for building the RESTful API. Selected for its speed, asynchronous support, and automatic OpenAPI documentation.
-*   **LangGraph**: A library for building stateful, multi-actor applications with Large Language Models. Used to orchestrate the complex AI pipeline consisting of transcription, pre-processing guardrails, extraction, and post-processing validation.
-*   **Google Gemini 1.5**: The core AI engine powering the application. Utilized via the `google-genai` SDK for its massive context window and native audio processing capabilities to transcribe audio and intelligently extract structured mind map data.
-*   **PostgreSQL & SQLAlchemy**: The primary relational database and Object Relational Mapper (ORM) utilized for robust data persistence, schema management, and ensuring relational integrity.
-*   **Alembic**: Database migration tool used alongside SQLAlchemy to track and manage database schema changes over time.
-*   **Pytest**: Used for building the asynchronous unit testing infrastructure to ensure API reliability.
+### Backend
 
-### Frontend Stack
-*   **Next.js & React**: The core framework utilized for building a responsive, modern user interface with optimized rendering and efficient routing.
-*   **React Flow**: A highly customizable library utilized specifically for rendering the interactive, node-based mind map interface.
-*   **Tailwind CSS**: A utility-first CSS framework employed for rapid UI development and maintaining a consistent, professional design system.
+| Technology | Role |
+|---|---|
+| FastAPI | High-performance async REST API framework |
+| LangGraph | Orchestrates the multi-step AI pipeline as a stateful graph |
+| Groq API | Free-tier Whisper STT (transcription) + Llama 3.3 LLM (extraction) |
+| PostgreSQL 16 | Primary relational database |
+| SQLAlchemy + Asyncpg | Async ORM and database driver |
+| Alembic | Database schema migrations |
+| Structlog | Structured logging across all pipeline nodes |
+| Docker + Docker Compose | Containerized deployment for backend and database |
 
-## Prerequisites
+### Frontend
 
-Ensure you have the following installed on your system before proceeding:
-*   Python 3.10+
-*   Node.js 18+
-*   PostgreSQL 16+ (or Docker to run the database container)
-*   A valid Google Gemini API Key
+| Technology | Role |
+|---|---|
+| Next.js 16 | React framework with file-based routing |
+| React Flow | Interactive node-based mind map visualization |
+| TypeScript | Type-safe frontend code |
+| Vanilla CSS | Custom design system with dark mode |
 
-## Setup Guide
+---
 
-Follow the steps below to set up both the backend and frontend environments.
+## Project Structure
 
-### 1. Backend Setup
+```
+GraphMyVoice/
+|
++-- backend/
+|   |
+|   +-- app/
+|   |   +-- agents/
+|   |   |   +-- graph.py                  # LangGraph pipeline definition
+|   |   |   +-- state.py                  # Shared GraphState TypedDict
+|   |   |   +-- nodes/
+|   |   |   |   +-- ingestion.py          # File validation node
+|   |   |   |   +-- transcription.py      # Groq Whisper STT node
+|   |   |   |   +-- guardrail_pre.py      # Transcript quality check node
+|   |   |   |   +-- extraction.py         # Groq Llama extraction node
+|   |   |   |   +-- mindmap_builder.py    # Build nodes and edges node
+|   |   |   |   +-- guardrail_post.py     # Hallucination check node
+|   |   |   |   +-- persistence.py        # Save to PostgreSQL node
+|   |   |   +-- prompts/
+|   |   |       +-- extraction_prompt.py  # LLM system and user prompts
+|   |   +-- api/
+|   |   |   +-- v1/
+|   |   |       +-- sessions.py           # Upload, status, list endpoints
+|   |   |       +-- notes.py              # Notes CRUD endpoints
+|   |   |       +-- tasks.py              # Tasks CRUD endpoints
+|   |   +-- models/
+|   |   |   +-- session.py               # Session ORM model
+|   |   |   +-- mindmap_node.py          # MindmapNode ORM model
+|   |   |   +-- mindmap_edge.py          # MindmapEdge ORM model
+|   |   |   +-- note.py                  # Note ORM model
+|   |   |   +-- task.py                  # Task ORM model
+|   |   +-- services/
+|   |   |   +-- pipeline_service.py      # Background task runner
+|   |   +-- config.py                    # Pydantic settings
+|   |   +-- database.py                  # AsyncSession factory
+|   |   +-- main.py                      # FastAPI app entrypoint
+|   +-- migrations/                      # Alembic migration versions
+|   +-- docker-compose.yml               # PostgreSQL + Backend containers
+|   +-- Dockerfile
+|   +-- requirements.txt
+|   +-- .env.example
+|
++-- frontend/
+|   |
+|   +-- app/
+|   |   +-- page.tsx                     # Upload page (home)
+|   |   +-- session/[id]/page.tsx        # Session workspace (progress > mindmap)
+|   |   +-- layout.tsx
+|   |   +-- globals.css
+|   +-- components/
+|   |   +-- MindMap.tsx                  # React Flow mind map
+|   |   +-- UploadPanel.tsx              # Audio file upload UI
+|   |   +-- ProgressTimeline.tsx         # Pipeline progress display
+|   |   +-- TaskList.tsx                 # Extracted tasks with checkboxes
+|   |   +-- NotesPanel.tsx               # Session notes
+|   +-- lib/
+|   |   +-- api.ts                       # REST API client and polling
+|   |   +-- types.ts                     # TypeScript type definitions
+|   +-- .env.local                       # Frontend env (API base URL)
+|   +-- package.json
+|
++-- README.md
+```
 
-Navigate to the backend directory:
+---
+
+## Quick Start (Docker — Recommended)
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- A free [Groq API Key](https://console.groq.com) (no credit card required)
+- [Node.js 18+](https://nodejs.org) for the frontend
+
+### Step 1 — Clone the repo
+
+```bash
+git clone <your-repo-url>
+cd GraphMyVoice
+```
+
+### Step 2 — Configure the backend
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Open `backend/.env` and fill in your Groq API key:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+JWT_SECRET=change-me
+```
+
+### Step 3 — Start backend and database
+
 ```bash
 cd backend
-```
-
-**Environment Variables**
-Create a copy of the example environment file:
-```bash
-cp .env.example .env
-```
-Open the newly created `.env` file and insert your `GEMINI_API_KEY`. Modify the database URL if your local PostgreSQL instance uses different credentials.
-
-**Install Dependencies**
-Create a virtual environment and install the required Python packages:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-**Database Setup**
-Ensure your PostgreSQL server is running and the database specified in your `.env` exists. Apply the database migrations:
-```bash
-alembic upgrade head
-```
-
-**Run the Backend Server**
-Start the FastAPI server:
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-The API documentation (Swagger UI) will be available at: http://localhost:8000/docs
-
-### 2. Frontend Setup
-
-Open a new terminal session and navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-**Environment Variables**
-Create the local environment file:
-```bash
-cp .env.example .env.local
-```
-Ensure `NEXT_PUBLIC_API_BASE` is set to `http://localhost:8000/api/v1`.
-
-**Install Dependencies**
-Install the necessary Node packages:
-```bash
-npm install
-```
-
-**Run the Frontend Server**
-Start the Next.js development server:
-```bash
-npm run dev
-```
-The application will be accessible at: http://localhost:3000
-
-## Running with Docker
-
-For a streamlined deployment, you can run the backend and the database using Docker Compose.
-
-1.  Navigate to the `backend` directory.
-2.  Ensure your `backend/.env` file is properly configured with your Gemini API key.
-3.  Run the following command:
-```bash
 docker-compose up --build -d
 ```
-This command will provision the PostgreSQL database, run the Alembic migrations, and start the FastAPI backend service automatically.
 
-## Testing
+This will automatically:
+- Start a PostgreSQL 16 database on port 5433
+- Run Alembic migrations
+- Start the FastAPI backend on http://localhost:8000
 
-The backend includes a suite of unit tests. To run the tests, ensure you are in the `backend` directory with your virtual environment activated, then execute:
+### Step 4 — Start the frontend
+
+Open a new terminal:
 
 ```bash
-export PYTHONPATH="."  # On Windows PowerShell use: $env:PYTHONPATH="."
-pytest
+cd frontend
+npm install
+npm run dev
 ```
+
+The app will be available at http://localhost:3000
+
+### Step 5 — Upload an audio file
+
+1. Open http://localhost:3000
+2. Click "Choose File" and select an audio file (.mp3, .wav, .m4a, .webm)
+3. Watch the pipeline progress in real-time
+4. Explore your generated mind map
+
+---
+
+## Bugs Fixed During Development
+
+| # | Error | Root Cause | Fix |
+|---|---|---|---|
+| 1 | `failed to fetch` | Backend container crashing on startup | Alembic was not reading DATABASE_URL from env — fixed migrations/env.py to load from os.environ |
+| 2 | `401 Authorization header missing` | JWT bypass not triggering | docker restart does not re-read .env — needed --force-recreate to reload env vars |
+| 3 | `400 /sessions/undefined/status` | Session ID was undefined | Next.js 15 changed params to a Promise — fixed by wrapping with React.use() |
+| 4 | `invalid input value for enum: "queued"` | Pipeline status did not match DB enum | Mapped all node statuses to valid DB enum values |
+| 5 | `404 gemini-1.5-flash not found` | Hardcoded deprecated model name | Replaced hardcoded model with configurable settings.llm_model |
+| 6 | `429 RESOURCE_EXHAUSTED` | Gemini free tier quota exhausted | Migrated entire AI stack to Groq (free, no credit card needed) |
+| 7 | `Pipeline crashed: 'node_type'` | Field name mismatch in state dict | guardrail_post.py used node_type but MindmapNodeDict defines it as type |
+
+---
+
+## Output Screenshots
+
+> Add your screenshots here after running the project
+
+| Upload Screen | Processing Pipeline | Generated Mind Map |
+|:---:|:---:|:---:|
+| ![Upload](./screenshots/upload.png) | ![Processing](./screenshots/processing.png) | ![Mindmap](./screenshots/mindmap.png) |
+
+To add screenshots: Create a `screenshots/` folder in the project root and place your images there.
+
+---
+
+## Team
+
+| Role | Name |
+|---|---|
+| Frontend Developer | <!-- Mohammed Alfarraj --> |
+| Backend Developer | <!-- sultan Abuthnain --> |
+| Course / Bootcamp | <!-- SDAIA Academy --> |
+
+---
+
+## License
+
+This project was built as a capstone project. All rights reserved to the team members listed above.

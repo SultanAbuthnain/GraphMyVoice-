@@ -2,15 +2,15 @@
 app/agents/nodes/extraction.py
 ────────────────────────────────
 Node 4: Extraction Agent
-Sends the transcript to Claude and extracts a structured goals/plans/tasks JSON.
-Uses Pydantic structured output via langchain-anthropic to enforce the schema.
+Sends the transcript to Groq (Llama) and extracts a structured goals/plans/tasks JSON.
+Uses Groq's free-tier LLM with structured JSON output to enforce the schema.
 Retries up to settings.llm_max_retries times on failure.
 """
 
 import json
+import asyncio
 import structlog
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, SystemMessage
+from groq import Groq
 from pydantic import BaseModel, Field
 
 from app.agents.state import GraphState
@@ -50,19 +50,43 @@ class ExtractedContent(BaseModel):
     goals: list[Goal] = Field(default_factory=list)
 
 
-# ── LLM client with structured output ────────────────────────────────────────
+# ── Groq client ───────────────────────────────────────────────────────────────
 
-def _get_llm():
-    return ChatGoogleGenerativeAI(
+_client: Groq | None = None
+
+
+def _get_client() -> Groq:
+    global _client
+    if _client is None:
+        _client = Groq(api_key=settings.groq_api_key)
+    return _client
+
+
+async def _extract_with_groq(transcript: str) -> ExtractedContent:
+    client = _get_client()
+
+    messages = [
+        {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
+        {"role": "user", "content": EXTRACTION_USER_TEMPLATE.format(transcript=transcript)},
+    ]
+
+    response = await asyncio.to_thread(
+        client.chat.completions.create,
         model=settings.llm_model,
+        messages=messages,
+        response_format={"type": "json_object"},
         temperature=settings.llm_temperature,
-        google_api_key=settings.gemini_api_key,
-    ).with_structured_output(ExtractedContent)
+        max_tokens=4096,
+    )
+
+    raw = response.choices[0].message.content
+    data = json.loads(raw)
+    return ExtractedContent.model_validate(data)
 
 
 async def extraction_node(state: GraphState) -> dict:
     """
-    LangGraph node: extract goals/plans/tasks from transcript using Claude.
+    LangGraph node: extract goals/plans/tasks from transcript using Groq.
     Increments retry_count on each call; state controls retry loop via graph routing.
     """
     log = logger.bind(session_id=state["session_id"], node="extraction")
@@ -72,15 +96,7 @@ async def extraction_node(state: GraphState) -> dict:
     transcript = state.get("transcript", "")
 
     try:
-        llm = _get_llm()
-        messages = [
-            SystemMessage(content=EXTRACTION_SYSTEM_PROMPT),
-            HumanMessage(
-                content=EXTRACTION_USER_TEMPLATE.format(transcript=transcript)
-            ),
-        ]
-
-        result: ExtractedContent = await llm.ainvoke(messages)
+        result = await _extract_with_groq(transcript)
 
         extracted = result.model_dump()
         log.info(

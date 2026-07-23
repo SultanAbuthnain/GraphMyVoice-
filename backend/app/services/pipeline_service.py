@@ -16,14 +16,16 @@ from app.models.session import Session
 logger = structlog.get_logger()
 
 # Map LangGraph node names → (status, progress_percent)
+# NOTE: status values MUST match the session_status enum in the DB:
+#       uploaded | transcribing | extracting | structuring | validating | completed | failed
 NODE_PROGRESS: dict[str, tuple[str, int]] = {
-    "ingestion":       ("queued",          5),
-    "transcription":   ("transcribing",    15),
-    "guardrail_pre":   ("transcribing",    40),
-    "extraction":      ("extracting",      55),
-    "mindmap_builder": ("building_mindmap",75),
-    "guardrail_post":  ("validating",      88),
-    "persistence":     ("saving",          95),
+    "ingestion":       ("uploaded",      5),
+    "transcription":   ("transcribing",  15),
+    "guardrail_pre":   ("transcribing",  40),
+    "extraction":      ("extracting",    55),
+    "mindmap_builder": ("structuring",   75),
+    "guardrail_post":  ("validating",    88),
+    "persistence":     ("completed",     95),
 }
 
 

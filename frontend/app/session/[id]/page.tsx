@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { api, pollSessionStatus } from "@/lib/api";
 import type { MindmapResponse, Session } from "@/lib/types";
 import ProgressTimeline from "@/components/ProgressTimeline";
@@ -8,8 +8,8 @@ import MindMap from "@/components/MindMap";
 import NotesPanel from "@/components/NotesPanel";
 import TaskList from "@/components/TaskList";
 
-export default function SessionPage({ params }: { params: { id: string } }) {
-  const sessionId = params.id;
+export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: sessionId } = use(params);
   const [session, setSession] = useState<Session | null>(null);
   const [mindmap, setMindmap] = useState<MindmapResponse | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

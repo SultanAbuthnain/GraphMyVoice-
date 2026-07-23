@@ -55,7 +55,7 @@ async def guardrail_post_node(state: GraphState) -> dict:
     flags = list(state.get("validation_flags", []))
 
     # Only validate task nodes (leaf nodes) — goals/plans are more abstract
-    task_nodes = [n for n in nodes if n["node_type"] == "task"]
+    task_nodes = [n for n in nodes if n["type"] == "task"]
 
     if not task_nodes:
         log.warning("No task nodes to validate — setting score to 1.0")
@@ -80,7 +80,7 @@ async def guardrail_post_node(state: GraphState) -> dict:
     score = covered / len(task_nodes)
 
     # ── JSON structure validation ─────────────────────────────────────────────
-    required_fields = {"id", "parent_id", "label", "node_type", "order_index"}
+    required_fields = {"id", "parent_id", "label", "type", "order_index"}
     for node in nodes:
         missing = required_fields - set(node.keys())
         if missing:
