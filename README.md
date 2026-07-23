@@ -230,7 +230,6 @@ The app will be available at http://localhost:3000
 
 ## Output Screenshots
 
-> Add your screenshots here after running the project
 
 | Upload Screen | Processing Pipeline | Generated Mind Map |
 |:---:|:---:|:---:|
