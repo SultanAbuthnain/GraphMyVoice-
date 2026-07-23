@@ -2,9 +2,10 @@
 app/agents/nodes/transcription.py
 ───────────────────────────────────
 Node 2: Transcription
-Calls Google Gemini to natively transcribe audio to text and extract segment timestamps.
-Replaces the old Whisper + pydub chunking logic with a single prompt to gemini-1.5-flash
-which handles large audio files flawlessly.
+Sends the uploaded audio file to the Gemini File API and uses
+gemini-1.5-flash to transcribe it and extract per-segment timestamps.
+Returns a full transcript string and a list of timed chunks used by
+downstream nodes.
 """
 
 import os

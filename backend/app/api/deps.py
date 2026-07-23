@@ -31,11 +31,21 @@ async def get_current_user(
     """
     Validate JWT Bearer token and return the user payload.
 
-    MVP note: For development, if JWT_SECRET is still 'change-me',
-    a hardcoded demo user is returned so the frontend can work without auth.
+    SECURITY NOTE — Dev bypass:
+    If JWT_SECRET is still set to the default value 'change-me', ALL requests
+    are authenticated as a single hard-coded demo user with no token required.
+    This makes local development easier but is a critical security hole in any
+    deployed environment.  Set a strong, random JWT_SECRET before any demo,
+    staging, or production deployment.
     """
+    import logging
     # ── Dev bypass: allow working without a real token ────────────────────────
     if settings.jwt_secret == "change-me":
+        logging.getLogger(__name__).warning(
+            "SECURITY WARNING: JWT_SECRET is 'change-me'. "
+            "All requests are authenticated as 'demo_user_001' without any token validation. "
+            "Set a strong JWT_SECRET before any non-local deployment."
+        )
         return UserPayload(user_id="demo_user_001", email="demo@mindmap.local")
 
     if not credentials:

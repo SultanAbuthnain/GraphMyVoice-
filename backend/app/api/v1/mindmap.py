@@ -2,7 +2,7 @@
 app/api/v1/mindmap.py
 ──────────────────────
 Endpoint:
-  GET /sessions/{id}/mindmap  → return full mind map JSON
+  GET /sessions/{id}/mindmap  → return full mind map JSON (ownership-checked)
 """
 
 import uuid
@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import UserPayload, get_current_user, get_db
+from app.api.v1.sessions import _get_owned_session
 from app.models.mindmap_node import MindmapNode
 from app.models.mindmap_edge import MindmapEdge
 
@@ -25,7 +26,12 @@ async def get_mindmap(
 ):
     """
     Return the complete mind map for a session.
+    Verifies that the session is owned by the authenticated user before
+    returning any data (returns 403 otherwise).
     """
+    # Ownership check — raises 404/403 as appropriate
+    await _get_owned_session(session_id, current_user, db)
+
     try:
         session_uuid = uuid.UUID(session_id)
     except ValueError:

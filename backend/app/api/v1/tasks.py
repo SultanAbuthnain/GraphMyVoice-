@@ -3,17 +3,22 @@ app/api/v1/tasks.py
 ────────────────────
 Endpoints:
   GET    /sessions/{session_id}/tasks
+  POST   /sessions/{session_id}/tasks
   PATCH  /sessions/{session_id}/tasks/{task_id}
+
+All endpoints verify that the target session belongs to the authenticated
+user before reading or mutating any data.
 """
 
 import uuid
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import UserPayload, get_current_user, get_db
+from app.api.v1.sessions import _get_owned_session
 from app.models.task import Task
 
 router = APIRouter()
@@ -35,14 +40,17 @@ async def list_tasks(
     current_user: UserPayload = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        sess_uuid = uuid.UUID(session_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid session_id format")
+    """
+    Return all tasks for a session.
+    Returns 403 if the session belongs to a different user.
+    """
+    # Ownership check — raises 404/403 as appropriate
+    await _get_owned_session(session_id, current_user, db)
 
+    sess_uuid = uuid.UUID(session_id)
     result = await db.execute(select(Task).where(Task.session_id == sess_uuid))
     db_tasks = result.scalars().all()
-    
+
     return [
         {
             "id": str(t.id),
@@ -64,6 +72,13 @@ async def toggle_task(
     current_user: UserPayload = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Toggle the done-state of a task.
+    Returns 403 if the session belongs to a different user.
+    """
+    # Ownership check — raises 404/403 as appropriate
+    await _get_owned_session(session_id, current_user, db)
+
     try:
         sess_uuid = uuid.UUID(session_id)
         task_uuid = uuid.UUID(task_id)
@@ -74,7 +89,7 @@ async def toggle_task(
         select(Task).where(Task.id == task_uuid, Task.session_id == sess_uuid)
     )
     db_task = result.scalars().first()
-    
+
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -99,11 +114,14 @@ async def create_task(
     current_user: UserPayload = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        sess_uuid = uuid.UUID(session_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid session_id format")
+    """
+    Add a task to a session.
+    Returns 403 if the session belongs to a different user.
+    """
+    # Ownership check — raises 404/403 as appropriate
+    await _get_owned_session(session_id, current_user, db)
 
+    sess_uuid = uuid.UUID(session_id)
     db_task = Task(
         session_id=sess_uuid,
         node_id=uuid.UUID(body.node_id) if body.node_id else None,

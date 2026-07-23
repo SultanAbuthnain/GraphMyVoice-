@@ -3,6 +3,8 @@ app/api/v1/nodes.py
 ────────────────────
 Endpoint:
   PATCH /sessions/{session_id}/nodes/{node_id}  → edit node label/position
+
+Ownership of the parent session is verified before any mutation.
 """
 
 import uuid
@@ -12,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import UserPayload, get_current_user, get_db
+from app.api.v1.sessions import _get_owned_session
 from app.models.mindmap_node import MindmapNode
 
 router = APIRouter()
@@ -33,7 +36,11 @@ async def update_node(
 ):
     """
     Edit a node's label or update its layout coordinates.
+    Returns 403 if the session belongs to a different user.
     """
+    # Ownership check — raises 404/403 as appropriate
+    await _get_owned_session(session_id, current_user, db)
+
     try:
         sess_uuid = uuid.UUID(session_id)
         node_uuid = uuid.UUID(node_id)
@@ -44,7 +51,7 @@ async def update_node(
         select(MindmapNode).where(MindmapNode.id == node_uuid, MindmapNode.session_id == sess_uuid)
     )
     db_node = result.scalars().first()
-    
+
     if not db_node:
         raise HTTPException(status_code=404, detail="Node not found")
 

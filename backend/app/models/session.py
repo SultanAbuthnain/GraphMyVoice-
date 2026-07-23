@@ -8,7 +8,7 @@ Tracks the lifecycle of one audio processing job.
 from datetime import datetime, timezone
 import uuid
 
-from sqlalchemy import DateTime, Numeric, String, Text, Enum
+from sqlalchemy import DateTime, Index, Numeric, String, Text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,6 +18,8 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    # Owner of this session — used for multi-tenant data isolation
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     title: Mapped[str] = mapped_column(Text, nullable=False, default="Untitled session")
     
     status: Mapped[str] = mapped_column(
