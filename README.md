@@ -242,9 +242,9 @@ The app will be available at http://localhost:3000
 
 | Role | Name |
 |---|---|
-| Frontend Developer | <-- Mohammed Alfarraj --> |
-| Backend Developer | <-- sultan Abuthnain --> |
-| Course / Bootcamp | <-- SDAIA Academy --> |
+| Frontend Developer |  Mohammed Alfarraj  |
+| Backend Developer |  sultan Abuthnain  |
+| Course / Bootcamp |  SDAIA Academy  |
 
 ---
 https://github.com/SDAIAAcademy
