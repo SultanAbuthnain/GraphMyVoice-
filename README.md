@@ -231,11 +231,10 @@ The app will be available at http://localhost:3000
 ## Output Screenshots
 
 
-| Upload Screen | Processing Pipeline | Generated Mind Map |
+| Upload Screen | 
 |:---:|:---:|:---:|
-| ![Upload](./screenshots/upload.png) | ![Processing](./screenshots/processing.png) | ![Mindmap](./screenshots/mindmap.png) |
+| ![Upload](./screenshots/upload.png) |
 
-To add screenshots: Create a `screenshots/` folder in the project root and place your images there.
 
 ---
 
@@ -243,12 +242,12 @@ To add screenshots: Create a `screenshots/` folder in the project root and place
 
 | Role | Name |
 |---|---|
-| Frontend Developer | <!-- Mohammed Alfarraj --> |
-| Backend Developer | <!-- sultan Abuthnain --> |
-| Course / Bootcamp | <!-- SDAIA Academy --> |
+| Frontend Developer | <-- Mohammed Alfarraj --> |
+| Backend Developer | <-- sultan Abuthnain --> |
+| Course / Bootcamp | <-- SDAIA Academy --> |
 
 ---
-
+https://github.com/SDAIAAcademy
 ## License
 
 This project was built as a capstone project. All rights reserved to the team members listed above.
